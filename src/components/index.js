@@ -13,4 +13,5 @@ export { EmptyState } from './EmptyState';
 export { TransactionRow } from './TransactionRow';
 export { FilterChips, TypeFilterChips, PaymentFilterChips } from './FilterChips';
 export { TransactionForm } from './TransactionForm';
+export { BillCard } from './BillCard';
 

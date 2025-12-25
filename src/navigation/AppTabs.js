@@ -3,9 +3,10 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
-import { AddTransactionScreen, BillsScreen, StatsScreen } from '../screens';
+import { AddTransactionScreen, StatsScreen } from '../screens';
 import HomeStack from './HomeStack';
 import TransactionsStack from './TransactionsStack';
+import BillsStack from './BillsStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -62,7 +63,7 @@ export default function AppTabs() {
                     tabBarLabel: () => null,
                 }}
             />
-            <Tab.Screen name="Bills" component={BillsScreen} />
+            <Tab.Screen name="Bills" component={BillsStack} />
             <Tab.Screen name="Stats" component={StatsScreen} />
         </Tab.Navigator>
     );
