@@ -5,13 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { AppText, TransactionForm } from '../components';
-import { createTransaction } from '../services/transactions';
+import { updateTransaction, deleteTransaction } from '../services/transactions';
 import { getCategories } from '../services/firestore';
 
 /**
- * Add Transaction screen
+ * Edit Transaction screen
  */
-export default function AddTransactionScreen({ navigation }) {
+export default function EditTransactionScreen({ navigation, route }) {
+    const { transaction } = route.params;
     const { theme } = useTheme();
     const { user } = useAuth();
     const [categories, setCategories] = useState([]);
@@ -27,30 +28,55 @@ export default function AddTransactionScreen({ navigation }) {
 
         setLoading(true);
         try {
-            await createTransaction(user.uid, data);
+            await updateTransaction(user.uid, transaction.id, data);
             navigation.goBack();
         } catch (err) {
-            Alert.alert('Error', 'Failed to create transaction');
+            Alert.alert('Error', 'Failed to update transaction');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDelete = () => {
+        Alert.alert(
+            'Delete Transaction',
+            'Are you sure you want to delete this transaction?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteTransaction(user.uid, transaction.id);
+                            navigation.goBack();
+                        } catch (err) {
+                            Alert.alert('Error', 'Failed to delete transaction');
+                        }
+                    },
+                },
+            ]
+        );
     };
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.bg }]}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color={theme.colors.text} />
+                    <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
                 </TouchableOpacity>
-                <AppText variant="h2">Add Transaction</AppText>
-                <View style={styles.placeholder} />
+                <AppText variant="h2">Edit Transaction</AppText>
+                <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+                    <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
+                </TouchableOpacity>
             </View>
 
             <TransactionForm
+                initialData={transaction}
                 categories={categories}
                 onSubmit={handleSubmit}
                 loading={loading}
-                submitLabel="Save Transaction"
+                submitLabel="Update Transaction"
             />
         </SafeAreaView>
     );
@@ -60,5 +86,5 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
     closeButton: { padding: 4 },
-    placeholder: { width: 32 },
+    deleteButton: { padding: 4 },
 });

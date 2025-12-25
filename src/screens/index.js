@@ -8,6 +8,8 @@ export { default as SignupScreen } from './SignupScreen';
 export { default as HomeScreen } from './HomeScreen';
 export { default as TransactionsScreen } from './TransactionsScreen';
 export { default as AddTransactionScreen } from './AddTransactionScreen';
+export { default as EditTransactionScreen } from './EditTransactionScreen';
 export { default as BillsScreen } from './BillsScreen';
 export { default as StatsScreen } from './StatsScreen';
 export { default as SettingsScreen } from './SettingsScreen';
+

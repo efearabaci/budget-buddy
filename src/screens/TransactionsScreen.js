@@ -1,63 +1,92 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, FlatList } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, StyleSheet, SectionList, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
-import { AppCard, AppText, AppInput, Chip } from '../components';
+import { useAuth } from '../hooks/useAuth';
+import { AppCard, AppText, TransactionRow, EmptyState } from '../components';
+import { TypeFilterChips } from '../components/FilterChips';
+import { listenTransactionsByMonth, deleteTransaction } from '../services/transactions';
+import { getCategories } from '../services/firestore';
+import { getMonthKey, formatMonthDisplay, getPreviousMonth, getNextMonth } from '../utils/month';
+import { groupTransactionsByDay, applyFilters } from '../utils/grouping';
 
 /**
- * Transactions list screen
- * Shows all transactions with search and filter
- * @param {{ navigation: Object }} props
+ * Transactions list screen with filtering and search
  */
 export default function TransactionsScreen({ navigation }) {
     const { theme } = useTheme();
+    const { user } = useAuth();
+
+    const [monthKey, setMonthKey] = useState(getMonthKey());
+    const [transactions, setTransactions] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedFilter, setSelectedFilter] = useState('All');
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [loading, setLoading] = useState(true);
 
-    const filters = ['All', 'Income', 'Expense', 'This Month'];
+    // Load categories
+    useEffect(() => {
+        if (!user) return;
+        getCategories(user.uid).then(setCategories);
+    }, [user]);
 
-    // Placeholder transaction data
-    const transactions = [
-        { id: '1', title: 'Grocery Store', category: 'Food & Dining', amount: -85.50, type: 'expense', date: 'Today', time: '2:30 PM', icon: 'cart-outline' },
-        { id: '2', title: 'Salary Deposit', category: 'Income', amount: 3500.00, type: 'income', date: 'Today', time: '9:00 AM', icon: 'cash-outline' },
-        { id: '3', title: 'Coffee Shop', category: 'Food & Dining', amount: -6.50, type: 'expense', date: 'Yesterday', time: '8:15 AM', icon: 'cafe-outline' },
-        { id: '4', title: 'Gas Station', category: 'Transport', amount: -45.00, type: 'expense', date: 'Yesterday', time: '6:00 PM', icon: 'car-outline' },
-        { id: '5', title: 'Freelance Payment', category: 'Income', amount: 750.00, type: 'income', date: 'Dec 22', time: '11:30 AM', icon: 'briefcase-outline' },
-        { id: '6', title: 'Amazon Purchase', category: 'Shopping', amount: -129.99, type: 'expense', date: 'Dec 21', time: '3:45 PM', icon: 'bag-outline' },
-    ];
+    // Subscribe to transactions for current month
+    useEffect(() => {
+        if (!user) return;
+        setLoading(true);
 
-    // Group transactions by date
-    const groupedTransactions = transactions.reduce((groups, transaction) => {
-        const date = transaction.date;
-        if (!groups[date]) {
-            groups[date] = [];
-        }
-        groups[date].push(transaction);
-        return groups;
-    }, {});
+        const unsubscribe = listenTransactionsByMonth(user.uid, monthKey, (txs) => {
+            setTransactions(txs);
+            setLoading(false);
+        });
 
-    const renderTransaction = (item) => (
-        <View style={styles.transactionRow} key={item.id}>
-            <View style={[styles.transactionIcon, { backgroundColor: theme.colors.chipBg }]}>
-                <Ionicons
-                    name={item.icon}
-                    size={20}
-                    color={item.type === 'income' ? theme.colors.success : theme.colors.danger}
-                />
-            </View>
-            <View style={styles.transactionInfo}>
-                <AppText variant="body">{item.title}</AppText>
-                <AppText variant="caption" muted>{item.category} • {item.time}</AppText>
-            </View>
-            <AppText
-                variant="body"
-                color={item.type === 'income' ? theme.colors.success : theme.colors.danger}
-            >
-                {item.type === 'income' ? '+' : ''}{item.amount.toFixed(2)}
-            </AppText>
-        </View>
-    );
+        return unsubscribe;
+    }, [user, monthKey]);
+
+    // Get category map for quick lookup
+    const categoryMap = useMemo(() => {
+        const map = {};
+        categories.forEach(c => { map[c.id] = c; });
+        return map;
+    }, [categories]);
+
+    // Apply filters and group by day
+    const filteredTransactions = useMemo(() => {
+        return applyFilters(transactions, {
+            type: typeFilter,
+            search: searchQuery,
+        });
+    }, [transactions, typeFilter, searchQuery]);
+
+    const sections = useMemo(() => {
+        return groupTransactionsByDay(filteredTransactions);
+    }, [filteredTransactions]);
+
+    const handleDelete = (tx) => {
+        Alert.alert(
+            'Delete Transaction',
+            'Are you sure you want to delete this transaction?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteTransaction(user.uid, tx.id);
+                        } catch (err) {
+                            Alert.alert('Error', 'Failed to delete transaction');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleEdit = (tx) => {
+        navigation.navigate('EditTransaction', { transaction: tx });
+    };
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.bg }]}>
@@ -66,110 +95,89 @@ export default function TransactionsScreen({ navigation }) {
                 <AppText variant="h2">Transactions</AppText>
             </View>
 
-            {/* Search */}
-            <View style={styles.searchContainer}>
-                <View style={[styles.searchBox, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                    <Ionicons name="search-outline" size={20} color={theme.colors.mutedText} />
-                    <AppInput
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        placeholder="Search transactions..."
-                        style={styles.searchInput}
-                    />
-                </View>
+            {/* Month Selector */}
+            <View style={styles.monthSelector}>
+                <TouchableOpacity onPress={() => setMonthKey(getPreviousMonth(monthKey))}>
+                    <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+                </TouchableOpacity>
+                <AppText variant="body" style={styles.monthLabel}>
+                    {formatMonthDisplay(monthKey)}
+                </AppText>
+                <TouchableOpacity onPress={() => setMonthKey(getNextMonth(monthKey))}>
+                    <Ionicons name="chevron-forward" size={24} color={theme.colors.text} />
+                </TouchableOpacity>
             </View>
 
-            {/* Filter Chips */}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterContainer}
-                contentContainerStyle={styles.filterContent}
-            >
-                {filters.map((filter) => (
-                    <Chip
-                        key={filter}
-                        label={filter}
-                        selected={selectedFilter === filter}
-                        onPress={() => setSelectedFilter(filter)}
-                    />
-                ))}
-            </ScrollView>
+            {/* Search Bar */}
+            <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <Ionicons name="search-outline" size={20} color={theme.colors.mutedText} />
+                <TextInput
+                    style={[styles.searchInput, { color: theme.colors.text }]}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Search transactions..."
+                    placeholderTextColor={theme.colors.mutedText}
+                />
+                {searchQuery ? (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                        <Ionicons name="close-circle" size={20} color={theme.colors.mutedText} />
+                    </TouchableOpacity>
+                ) : null}
+            </View>
+
+            {/* Type Filter */}
+            <TypeFilterChips selected={typeFilter} onSelect={setTypeFilter} />
 
             {/* Transactions List */}
-            <ScrollView
-                style={styles.listContainer}
-                showsVerticalScrollIndicator={false}
-            >
-                {Object.entries(groupedTransactions).map(([date, items]) => (
-                    <View key={date}>
-                        <AppText variant="caption" muted style={styles.dateHeader}>
-                            {date.toUpperCase()}
+            {sections.length > 0 ? (
+                <SectionList
+                    sections={sections}
+                    keyExtractor={(item) => item.id}
+                    style={styles.list}
+                    contentContainerStyle={styles.listContent}
+                    renderSectionHeader={({ section }) => (
+                        <AppText variant="caption" muted style={styles.sectionHeader}>
+                            {section.title}
                         </AppText>
-                        <AppCard>
-                            {items.map(renderTransaction)}
-                        </AppCard>
-                    </View>
-                ))}
-            </ScrollView>
+                    )}
+                    renderItem={({ item }) => {
+                        const cat = categoryMap[item.categoryId];
+                        return (
+                            <AppCard style={styles.txCard}>
+                                <TransactionRow
+                                    transaction={item}
+                                    categoryName={cat?.name || item.categoryNameSnapshot}
+                                    categoryIcon={cat?.icon}
+                                    onPress={() => handleEdit(item)}
+                                    onLongPress={() => handleDelete(item)}
+                                />
+                            </AppCard>
+                        );
+                    }}
+                />
+            ) : (
+                <View style={styles.empty}>
+                    <EmptyState
+                        icon="receipt-outline"
+                        title="No transactions"
+                        subtitle={loading ? 'Loading...' : 'Add your first transaction'}
+                    />
+                </View>
+            )}
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    header: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    searchContainer: {
-        paddingHorizontal: 16,
-        marginBottom: 8,
-    },
-    searchBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-    },
-    searchInput: {
-        flex: 1,
-        marginBottom: 0,
-        marginLeft: 8,
-    },
-    filterContainer: {
-        maxHeight: 50,
-        marginBottom: 8,
-    },
-    filterContent: {
-        paddingHorizontal: 16,
-    },
-    listContainer: {
-        flex: 1,
-        paddingHorizontal: 16,
-    },
-    dateHeader: {
-        marginTop: 16,
-        marginBottom: 8,
-        fontWeight: '600',
-    },
-    transactionRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 8,
-    },
-    transactionIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-    },
-    transactionInfo: {
-        flex: 1,
-    },
+    container: { flex: 1 },
+    header: { paddingHorizontal: 16, paddingVertical: 12 },
+    monthSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    monthLabel: { marginHorizontal: 16, fontWeight: '600' },
+    searchContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
+    searchInput: { flex: 1, marginLeft: 8, fontSize: 16 },
+    list: { flex: 1 },
+    listContent: { paddingHorizontal: 16, paddingBottom: 24 },
+    sectionHeader: { marginTop: 16, marginBottom: 8, fontWeight: '600' },
+    txCard: { marginBottom: 8, paddingVertical: 4 },
+    empty: { flex: 1, justifyContent: 'center' },
 });
