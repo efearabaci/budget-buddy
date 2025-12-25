@@ -86,18 +86,20 @@ export default function HomeScreen({ navigation }) {
                 </AppCard>
 
                 {/* Monthly Budget */}
-                <AppCard>
-                    <View style={styles.cardHeader}>
-                        <AppText variant="h2">Monthly Budget</AppText>
-                        <AppText variant="caption" muted>
-                            ${budgetSpent.toFixed(0)} / ${budget.toFixed(0)}
+                <TouchableOpacity onPress={() => navigation.navigate('Budgets')}>
+                    <AppCard>
+                        <View style={styles.cardHeader}>
+                            <AppText variant="h2">Monthly Budget</AppText>
+                            <AppText variant="caption" muted>
+                                ${budgetSpent.toFixed(0)} / ${budget.toFixed(0)}
+                            </AppText>
+                        </View>
+                        <ProgressBar progress={budgetProgress} style={styles.progressBar} />
+                        <AppText variant="caption" muted style={styles.budgetRemaining}>
+                            ${(budget - budgetSpent).toFixed(2)} remaining • Tap to manage
                         </AppText>
-                    </View>
-                    <ProgressBar progress={budgetProgress} style={styles.progressBar} />
-                    <AppText variant="caption" muted style={styles.budgetRemaining}>
-                        ${(budget - budgetSpent).toFixed(2)} remaining
-                    </AppText>
-                </AppCard>
+                    </AppCard>
+                </TouchableOpacity>
 
                 {/* Top Spending */}
                 <AppCard>
