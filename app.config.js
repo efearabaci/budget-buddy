@@ -1,6 +1,8 @@
 /**
  * Expo app configuration with environment variables
  */
+import 'dotenv/config';
+
 export default {
     expo: {
         name: "BudgetBuddy",

@@ -1,31 +1,48 @@
 import React from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import AuthStack from './AuthStack';
 import AppTabs from './AppTabs';
-import { AddTransactionScreen } from '../screens';
 
 const RootStack = createNativeStackNavigator();
 
 /**
  * Root navigation container
- * Switches between Auth stack and Main app
+ * Switches between Auth and Main app based on auth state
  */
 export default function RootNavigation() {
-    // TODO: Add auth state check to conditionally show Auth or MainApp
-    const isAuthenticated = false;
+    const { user, loading } = useAuth();
+    const { theme } = useTheme();
+
+    // Show loading screen while checking auth state
+    if (loading) {
+        return (
+            <View style={[styles.loading, { backgroundColor: theme.colors.bg }]}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+        );
+    }
 
     return (
         <NavigationContainer>
             <RootStack.Navigator screenOptions={{ headerShown: false }}>
-                <RootStack.Screen name="Auth" component={AuthStack} />
-                <RootStack.Screen name="MainApp" component={AppTabs} />
-                <RootStack.Screen
-                    name="AddTransaction"
-                    component={AddTransactionScreen}
-                    options={{ presentation: 'modal' }}
-                />
+                {user ? (
+                    <RootStack.Screen name="MainApp" component={AppTabs} />
+                ) : (
+                    <RootStack.Screen name="Auth" component={AuthStack} />
+                )}
             </RootStack.Navigator>
         </NavigationContainer>
     );
 }
+
+const styles = StyleSheet.create({
+    loading: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+});

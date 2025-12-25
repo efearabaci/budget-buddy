@@ -1,16 +1,15 @@
-import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/theme/ThemeProvider';
+import { AuthProvider } from './src/hooks/useAuth';
 import RootNavigation from './src/navigation';
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
+    <ThemeProvider>
+      <AuthProvider>
         <StatusBar style="auto" />
         <RootNavigation />
-      </ThemeProvider>
-    </SafeAreaProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
