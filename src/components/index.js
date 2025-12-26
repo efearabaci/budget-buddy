@@ -16,3 +16,5 @@ export { TransactionForm } from './TransactionForm';
 export { BillCard } from './BillCard';
 export { BudgetProgressBar } from './BudgetProgressBar';
 export { MonthSelector } from './MonthSelector';
+export { SummaryCard, SummaryRow, RemainingCard } from './SummaryCard';
+export { QuickActions } from './QuickActions';
