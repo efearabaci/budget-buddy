@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { useCurrency } from '../hooks/useCurrency';
@@ -54,9 +55,11 @@ export default function HomeScreen({ navigation }) {
         }
     }, [user, monthKey]);
 
-    useEffect(() => {
-        loadMonthData();
-    }, [loadMonthData]);
+    useFocusEffect(
+        useCallback(() => {
+            loadMonthData();
+        }, [loadMonthData])
+    );
 
     // Subscribe to bills (filtered locally to next 30 days)
     useEffect(() => {
