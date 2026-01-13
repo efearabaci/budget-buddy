@@ -84,7 +84,8 @@ export const PaymentFilterChips = ({ selected, onSelect }) => {
 
 const styles = StyleSheet.create({
     container: {
-        maxHeight: 50,
+        height: 60,
+        flexGrow: 0,
     },
     content: {
         paddingHorizontal: 16,

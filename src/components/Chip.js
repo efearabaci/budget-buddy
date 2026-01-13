@@ -31,7 +31,7 @@ export const Chip = ({ label, selected = false, onPress, style }) => {
                 style={[
                     styles.label,
                     {
-                        color: selected ? '#FFFFFF' : theme.colors.text,
+                        color: selected ? '#FFFFFF' : (theme.mode === 'dark' ? '#FFFFFF' : '#000000'),
                     },
                 ]}
             >
@@ -43,13 +43,17 @@ export const Chip = ({ label, selected = false, onPress, style }) => {
 
 const styles = StyleSheet.create({
     chip: {
-        paddingHorizontal: 14,
+        paddingHorizontal: 12,
         paddingVertical: 8,
         marginRight: 8,
         marginBottom: 8,
+        borderRadius: 16,
+        minWidth: 60,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     label: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: 13,
+        fontWeight: '600',
     },
 });
