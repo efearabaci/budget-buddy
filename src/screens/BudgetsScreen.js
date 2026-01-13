@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
@@ -56,9 +57,11 @@ export default function BudgetsScreen({ navigation }) {
         }
     }, [user, monthKey]);
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [loadData])
+    );
 
     const handleSaveBudget = async () => {
         if (!user) return;
@@ -71,11 +74,10 @@ export default function BudgetsScreen({ navigation }) {
         try {
             const dataToSave = {
                 overallLimit: overall,
-                categoryLimits: categoryLimits,
-                monthKey
+                categoryLimits: categoryLimits
             };
-            await upsertBudget(user.uid, dataToSave);
-            setBudget({ ...budget, ...dataToSave });
+            await upsertBudget(user.uid, monthKey, dataToSave);
+            setBudget({ ...budget, ...dataToSave, monthKey });
             setEditing(false);
         } catch (err) {
             Alert.alert('Error', 'Failed to save budget');
@@ -106,166 +108,173 @@ export default function BudgetsScreen({ navigation }) {
                 <View style={{ width: 24 }} />
             </View>
 
-            {/* Month Selector */}
-            <MonthSelector
-                monthKey={monthKey}
-                onPrevious={() => setMonthKey(getPreviousMonth(monthKey))}
-                onNext={() => setMonthKey(getNextMonth(monthKey))}
-            />
+            {loading ? (
+                <View style={[styles.centerContainer, { backgroundColor: theme.colors.bg }]}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                </View>
+            ) : (
+                <View style={{ flex: 1 }}>
+                    <MonthSelector
+                        monthKey={monthKey}
+                        onPrevious={() => setMonthKey(getPreviousMonth(monthKey))}
+                        onNext={() => setMonthKey(getNextMonth(monthKey))}
+                    />
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Summary Card */}
-                <AppCard style={styles.summaryCard}>
-                    <View style={styles.summaryRow}>
-                        <View style={styles.summaryItem}>
-                            <AppText variant="caption" muted>Income</AppText>
-                            <AppText variant="h2" color={theme.colors.success}>
-                                {formatCurrency(totals.income)}
-                            </AppText>
-                        </View>
-                        <View style={[styles.summaryItem, styles.centerItem]}>
-                            <AppText variant="caption" muted>Expense</AppText>
-                            <AppText variant="h2" color={theme.colors.danger}>
-                                {formatCurrency(totals.expense)}
-                            </AppText>
-                        </View>
-                        <View style={[styles.summaryItem, styles.rightItem]}>
-                            <AppText variant="caption" muted>Net</AppText>
-                            <AppText
-                                variant="h2"
-                                color={totals.net >= 0 ? theme.colors.success : theme.colors.danger}
-                            >
-                                {formatCurrency(totals.net)}
-                            </AppText>
-                        </View>
-                    </View>
-                </AppCard>
-
-                {/* Budget Progress */}
-                <AppCard>
-                    <View style={styles.budgetHeader}>
-                        <AppText variant="h2">Monthly Budget</AppText>
-                        <TouchableOpacity onPress={() => setEditing(!editing)}>
-                            <Ionicons
-                                name={editing ? 'close' : 'pencil'}
-                                size={20}
-                                color={theme.colors.primary}
-                            />
-                        </TouchableOpacity>
-                    </View>
-
-                    {editing ? (
-                        <View style={styles.editForm}>
-                            <AppText variant="caption" muted style={{ marginBottom: 8 }}>Overall Monthly Limit</AppText>
-                            <View style={[styles.inputRow, { borderColor: theme.colors.border }]}>
-                                <AppText variant="h2" color={theme.colors.mutedText}>$</AppText>
-                                <TextInput
-                                    style={[styles.input, { color: theme.colors.text }]}
-                                    value={limitInput}
-                                    onChangeText={setLimitInput}
-                                    placeholder="0.00"
-                                    placeholderTextColor={theme.colors.mutedText}
-                                    keyboardType="decimal-pad"
-                                />
-                            </View>
-
-                            <AppText variant="h2" style={{ marginTop: 16, marginBottom: 12 }}>Category Limits</AppText>
-                            {allCategories.map(cat => (
-                                <View key={cat.id} style={styles.categoryLimitRow}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                        <View style={[styles.miniIcon, { backgroundColor: theme.colors.chipBg }]}>
-                                            <Ionicons name={cat.icon || 'pricetag-outline'} size={14} color={theme.colors.primary} />
-                                        </View>
-                                        <AppText variant="body">{cat.name}</AppText>
-                                    </View>
-                                    <TextInput
-                                        style={[styles.smallInput, { color: theme.colors.text, borderColor: theme.colors.border }]}
-                                        value={categoryLimits[cat.id]?.toString() || ''}
-                                        onChangeText={(v) => handleCategoryLimitChange(cat.id, v)}
-                                        placeholder="No limit"
-                                        placeholderTextColor={theme.colors.mutedText}
-                                        keyboardType="decimal-pad"
-                                    />
-                                </View>
-                            ))}
-
-                            <AppButton
-                                title="Save Budgets"
-                                onPress={handleSaveBudget}
-                                loading={saving}
-                                style={styles.saveButton}
-                            />
-                        </View>
-                    ) : (hasBudget || hasCategoryBudgets) ? (
-                        <View>
-                            {hasBudget && (
-                                <BudgetProgressBar
-                                    spent={totals.expense}
-                                    limit={budget.overallLimit}
-                                />
-                            )}
-
-                            {hasCategoryBudgets && (
-                                <View style={{ marginTop: 24 }}>
-                                    <AppText variant="h3" style={{ marginBottom: 12 }}>Category Budgets</AppText>
-                                    {allCategories
-                                        .filter(cat => (budget.categoryLimits?.[cat.id] || 0) > 0)
-                                        .map(cat => {
-                                            const limit = budget.categoryLimits[cat.id];
-                                            const spent = categorySpending.find(s => s.categoryId === cat.id)?.amount || 0;
-                                            return (
-                                                <View key={cat.id} style={{ marginBottom: 16 }}>
-                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                                                        <AppText variant="body">{cat.name}</AppText>
-                                                    </View>
-                                                    <BudgetProgressBar
-                                                        spent={spent}
-                                                        limit={limit}
-                                                        height={8}
-                                                    />
-                                                </View>
-                                            );
-                                        })}
-                                </View>
-                            )}
-                        </View>
-                    ) : (
-                        <View style={styles.noBudget}>
-                            <Ionicons name="wallet-outline" size={48} color={theme.colors.mutedText} />
-                            <AppText variant="body" muted style={styles.noBudgetText}>
-                                No budgets set for this month
-                            </AppText>
-                            <AppButton
-                                title="Set Budget"
-                                onPress={() => setEditing(true)}
-                                variant="secondary"
-                            />
-                        </View>
-                    )}
-                </AppCard>
-
-                {/* Top Spending Categories (Analytic View) */}
-                {!editing && categorySpending.length > 0 && (
-                    <AppCard>
-                        <AppText variant="h2" style={styles.sectionTitle}>Spending Breakdown</AppText>
-                        {categorySpending.map((cat, index) => (
-                            <View key={cat.categoryId} style={styles.categoryRow}>
-                                <View style={styles.categoryInfo}>
-                                    <AppText variant="body">{cat.categoryName}</AppText>
-                                    <AppText variant="caption" muted>
-                                        {cat.percentage.toFixed(1)}%
+                    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                        {/* Summary Card */}
+                        <AppCard style={styles.summaryCard}>
+                            <View style={styles.summaryRow}>
+                                <View style={styles.summaryItem}>
+                                    <AppText variant="caption" muted>Income</AppText>
+                                    <AppText variant="h2" color={theme.colors.success}>
+                                        {formatCurrency(totals.income)}
                                     </AppText>
                                 </View>
-                                <AppText variant="body" style={styles.categoryAmount}>
-                                    {formatCurrency(cat.amount)}
-                                </AppText>
+                                <View style={[styles.summaryItem, styles.centerItem]}>
+                                    <AppText variant="caption" muted>Expense</AppText>
+                                    <AppText variant="h2" color={theme.colors.danger}>
+                                        {formatCurrency(totals.expense)}
+                                    </AppText>
+                                </View>
+                                <View style={[styles.summaryItem, styles.rightItem]}>
+                                    <AppText variant="caption" muted>Net</AppText>
+                                    <AppText
+                                        variant="h2"
+                                        color={totals.net >= 0 ? theme.colors.success : theme.colors.danger}
+                                    >
+                                        {formatCurrency(totals.net)}
+                                    </AppText>
+                                </View>
                             </View>
-                        ))}
-                    </AppCard>
-                )}
+                        </AppCard>
 
-                <View style={styles.bottomPadding} />
-            </ScrollView>
+                        {/* Budget Progress */}
+                        <AppCard>
+                            <View style={styles.budgetHeader}>
+                                <AppText variant="h2">Monthly Budget</AppText>
+                                <TouchableOpacity onPress={() => setEditing(!editing)}>
+                                    <Ionicons
+                                        name={editing ? 'close' : 'pencil'}
+                                        size={20}
+                                        color={theme.colors.primary}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+
+                            {editing ? (
+                                <View style={styles.editForm}>
+                                    <AppText variant="caption" muted style={{ marginBottom: 8 }}>Overall Monthly Limit</AppText>
+                                    <View style={[styles.inputRow, { borderColor: theme.colors.border }]}>
+                                        <AppText variant="h2" color={theme.colors.mutedText}>$</AppText>
+                                        <TextInput
+                                            style={[styles.input, { color: theme.colors.text }]}
+                                            value={limitInput}
+                                            onChangeText={setLimitInput}
+                                            placeholder="0.00"
+                                            placeholderTextColor={theme.colors.mutedText}
+                                            keyboardType="decimal-pad"
+                                        />
+                                    </View>
+
+                                    <AppText variant="h2" style={{ marginTop: 16, marginBottom: 12 }}>Category Limits</AppText>
+                                    {allCategories.map(cat => (
+                                        <View key={cat.id} style={styles.categoryLimitRow}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                                <View style={[styles.miniIcon, { backgroundColor: theme.colors.chipBg }]}>
+                                                    <Ionicons name={cat.icon || 'pricetag-outline'} size={14} color={theme.colors.primary} />
+                                                </View>
+                                                <AppText variant="body">{cat.name}</AppText>
+                                            </View>
+                                            <TextInput
+                                                style={[styles.smallInput, { color: theme.colors.text, borderColor: theme.colors.border }]}
+                                                value={categoryLimits[cat.id]?.toString() || ''}
+                                                onChangeText={(v) => handleCategoryLimitChange(cat.id, v)}
+                                                placeholder="No limit"
+                                                placeholderTextColor={theme.colors.mutedText}
+                                                keyboardType="decimal-pad"
+                                            />
+                                        </View>
+                                    ))}
+
+                                    <AppButton
+                                        title="Save Budgets"
+                                        onPress={handleSaveBudget}
+                                        loading={saving}
+                                        style={styles.saveButton}
+                                    />
+                                </View>
+                            ) : (hasBudget || hasCategoryBudgets) ? (
+                                <View>
+                                    {hasBudget && (
+                                        <BudgetProgressBar
+                                            spent={totals.expense}
+                                            limit={budget.overallLimit}
+                                        />
+                                    )}
+
+                                    {hasCategoryBudgets && (
+                                        <View style={{ marginTop: 24 }}>
+                                            <AppText variant="h3" style={{ marginBottom: 12 }}>Category Budgets</AppText>
+                                            {allCategories
+                                                .filter(cat => (budget.categoryLimits?.[cat.id] || 0) > 0)
+                                                .map(cat => {
+                                                    const limit = budget.categoryLimits[cat.id];
+                                                    const spent = categorySpending.find(s => s.categoryId === cat.id)?.amount || 0;
+                                                    return (
+                                                        <View key={cat.id} style={{ marginBottom: 16 }}>
+                                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                                <AppText variant="body">{cat.name}</AppText>
+                                                            </View>
+                                                            <BudgetProgressBar
+                                                                spent={spent}
+                                                                limit={limit}
+                                                                height={8}
+                                                            />
+                                                        </View>
+                                                    );
+                                                })}
+                                        </View>
+                                    )}
+                                </View>
+                            ) : (
+                                <View style={styles.noBudget}>
+                                    <Ionicons name="wallet-outline" size={48} color={theme.colors.mutedText} />
+                                    <AppText variant="body" muted style={styles.noBudgetText}>
+                                        No budgets set for this month
+                                    </AppText>
+                                    <AppButton
+                                        title="Set Budget"
+                                        onPress={() => setEditing(true)}
+                                        variant="secondary"
+                                    />
+                                </View>
+                            )}
+                        </AppCard>
+
+                        {/* Top Spending Categories (Analytic View) */}
+                        {!editing && categorySpending.length > 0 && (
+                            <AppCard>
+                                <AppText variant="h2" style={styles.sectionTitle}>Spending Breakdown</AppText>
+                                {categorySpending.map((cat, index) => (
+                                    <View key={cat.categoryId} style={styles.categoryRow}>
+                                        <View style={styles.categoryInfo}>
+                                            <AppText variant="body">{cat.categoryName}</AppText>
+                                            <AppText variant="caption" muted>
+                                                {cat.percentage.toFixed(1)}%
+                                            </AppText>
+                                        </View>
+                                        <AppText variant="body" style={styles.categoryAmount}>
+                                            {formatCurrency(cat.amount)}
+                                        </AppText>
+                                    </View>
+                                ))}
+                            </AppCard>
+                        )}
+
+                        <View style={styles.bottomPadding} />
+                    </ScrollView>
+                </View>
+            )}
         </SafeAreaView>
     );
 }
