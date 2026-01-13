@@ -13,6 +13,7 @@ import { getMonthlyTotals, getMonthlySpentByCategory } from '../services/analyti
 import { getMonthKey, getPreviousMonth, getNextMonth } from '../utils/month';
 import { formatCurrency } from '../utils/format';
 import { getCategories } from '../services/firestore';
+import { useCurrency } from '../hooks/useCurrency';
 
 /**
  * Budgets screen with monthly budget setting and progress
@@ -20,6 +21,7 @@ import { getCategories } from '../services/firestore';
 export default function BudgetsScreen({ navigation }) {
     const { theme } = useTheme();
     const { user } = useAuth();
+    const { formatPrice } = useCurrency();
 
     const [monthKey, setMonthKey] = useState(getMonthKey());
     const [budget, setBudget] = useState(null);
@@ -127,13 +129,13 @@ export default function BudgetsScreen({ navigation }) {
                                 <View style={styles.summaryItem}>
                                     <AppText variant="caption" muted>Income</AppText>
                                     <AppText variant="h2" color={theme.colors.success}>
-                                        {formatCurrency(totals.income)}
+                                        {formatPrice(totals.income)}
                                     </AppText>
                                 </View>
                                 <View style={[styles.summaryItem, styles.centerItem]}>
                                     <AppText variant="caption" muted>Expense</AppText>
                                     <AppText variant="h2" color={theme.colors.danger}>
-                                        {formatCurrency(totals.expense)}
+                                        {formatPrice(totals.expense)}
                                     </AppText>
                                 </View>
                                 <View style={[styles.summaryItem, styles.rightItem]}>
@@ -142,7 +144,7 @@ export default function BudgetsScreen({ navigation }) {
                                         variant="h2"
                                         color={totals.net >= 0 ? theme.colors.success : theme.colors.danger}
                                     >
-                                        {formatCurrency(totals.net)}
+                                        {formatPrice(totals.net)}
                                     </AppText>
                                 </View>
                             </View>
@@ -264,7 +266,7 @@ export default function BudgetsScreen({ navigation }) {
                                             </AppText>
                                         </View>
                                         <AppText variant="body" style={styles.categoryAmount}>
-                                            {formatCurrency(cat.amount)}
+                                            {formatPrice(cat.amount)}
                                         </AppText>
                                     </View>
                                 ))}
