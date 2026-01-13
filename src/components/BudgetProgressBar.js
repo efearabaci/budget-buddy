@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
+import { useCurrency } from '../hooks/useCurrency';
 import { AppText } from './AppText';
-import { formatCurrency } from '../utils/format';
 
 /**
  * Budget progress bar with warning states
@@ -16,6 +16,7 @@ export const BudgetProgressBar = ({
     height = 12,
 }) => {
     const { theme } = useTheme();
+    const { formatPrice } = useCurrency();
 
     const percentage = limit > 0 ? (spent / limit) * 100 : 0;
     const clampedPercentage = Math.min(percentage, 100);
@@ -40,7 +41,7 @@ export const BudgetProgressBar = ({
                     <View>
                         <AppText variant="caption" muted>Spent</AppText>
                         <AppText variant="body" color={barColor} style={styles.amount}>
-                            {formatCurrency(spent)}
+                            {formatPrice(spent)}
                         </AppText>
                     </View>
                     <View style={styles.rightLabel}>
@@ -53,8 +54,8 @@ export const BudgetProgressBar = ({
                             style={styles.amount}
                         >
                             {status === 'exceeded'
-                                ? formatCurrency(spent - limit)
-                                : formatCurrency(remaining)
+                                ? formatPrice(spent - limit)
+                                : formatPrice(remaining)
                             }
                         </AppText>
                     </View>
@@ -76,7 +77,7 @@ export const BudgetProgressBar = ({
             {showLabels && (
                 <View style={styles.bottomRow}>
                     <AppText variant="caption" muted>
-                        {percentage.toFixed(0)}% of {formatCurrency(limit)}
+                        {percentage.toFixed(0)}% of {formatPrice(limit)}
                     </AppText>
                     {status === 'warning' && (
                         <AppText variant="caption" color={theme.colors.warning}>

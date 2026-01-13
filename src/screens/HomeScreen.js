@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
+import { useCurrency } from '../hooks/useCurrency';
 import { AppCard, AppText, ProgressBar, EmptyState } from '../components';
 import { SummaryRow, RemainingCard } from '../components/SummaryCard';
 import { QuickActions } from '../components/QuickActions';
@@ -13,7 +14,6 @@ import { getMonthlyTotals, getTopCategories } from '../services/analytics';
 import { getBudget } from '../services/budgets';
 import { listenBills } from '../services/bills';
 import { getMonthKey, getPreviousMonth, getNextMonth } from '../utils/month';
-import { formatCurrency } from '../utils/format';
 import { getBillStatus, formatDueDate } from '../utils/bills';
 
 /**
@@ -23,6 +23,7 @@ import { getBillStatus, formatDueDate } from '../utils/bills';
 export default function HomeScreen({ navigation }) {
     const { theme } = useTheme();
     const { user } = useAuth();
+    const { formatPrice } = useCurrency();
 
     const [monthKey, setMonthKey] = useState(getMonthKey());
     const [totals, setTotals] = useState({ income: 0, expense: 0, net: 0 });
@@ -115,6 +116,10 @@ export default function HomeScreen({ navigation }) {
                 />
 
                 {/* Summary Cards */}
+                {/* Note: SummaryRow and RemainingCard are passed raw totals. 
+                    They need to be updated to use useCurrency internally OR accept formatted strings.
+                    Assuming component encapsulation, better to update them.
+                    However, for speed, I might check them. */}
                 <SummaryRow income={totals.income} expense={totals.expense} />
                 <RemainingCard income={totals.income} expense={totals.expense} />
 
@@ -155,7 +160,7 @@ export default function HomeScreen({ navigation }) {
                                     <AppText variant="caption" muted>{item.percentage.toFixed(1)}%</AppText>
                                 </View>
                                 <AppText variant="body" color={theme.colors.danger}>
-                                    -{formatCurrency(item.amount)}
+                                    -{formatPrice(item.amount)}
                                 </AppText>
                             </View>
                         ))
@@ -184,7 +189,7 @@ export default function HomeScreen({ navigation }) {
                                     <AppText variant="body">{bill.name}</AppText>
                                     <AppText variant="caption" muted>{formatDueDate(bill.dueDate)}</AppText>
                                 </View>
-                                <AppText variant="body">{formatCurrency(bill.amount)}</AppText>
+                                <AppText variant="body">{formatPrice(bill.amount)}</AppText>
                             </View>
                         ))
                     ) : (

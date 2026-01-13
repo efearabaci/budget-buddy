@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
+import { useCurrency } from '../hooks/useCurrency';
 import { AppCard } from './AppCard';
 import { AppText } from './AppText';
-import { formatCurrency } from '../utils/format';
 
 /**
  * Summary card for displaying a single metric
@@ -15,6 +15,7 @@ export const SummaryCard = ({
     style,
 }) => {
     const { theme } = useTheme();
+    const { formatPrice } = useCurrency();
 
     const getColor = () => {
         switch (type) {
@@ -31,7 +32,7 @@ export const SummaryCard = ({
         <AppCard style={[styles.card, style]}>
             <AppText variant="caption" muted>{label}</AppText>
             <AppText variant="h2" color={getColor()}>
-                {typeof value === 'number' ? formatCurrency(value) : value}
+                {typeof value === 'number' ? formatPrice(value) : value}
             </AppText>
         </AppCard>
     );
@@ -67,6 +68,7 @@ export const SummaryRow = ({ income, expense }) => {
  */
 export const RemainingCard = ({ income, expense }) => {
     const { theme } = useTheme();
+    const { formatPrice } = useCurrency();
     const remaining = income - expense;
 
     return (
@@ -76,7 +78,7 @@ export const RemainingCard = ({ income, expense }) => {
                 variant="title"
                 color={remaining >= 0 ? theme.colors.success : theme.colors.danger}
             >
-                {formatCurrency(remaining)}
+                {formatPrice(remaining)}
             </AppText>
         </AppCard>
     );

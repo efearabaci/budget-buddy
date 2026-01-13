@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
+import { useCurrency } from '../hooks/useCurrency';
 import { AppCard, AppText } from '../components';
 import { logout } from '../services/auth';
 
@@ -13,7 +14,9 @@ import { logout } from '../services/auth';
 export default function SettingsScreen({ navigation }) {
     const { theme, toggleTheme, isDark } = useTheme();
     const { user } = useAuth();
+    const { currency, setCurrency, supportedCurrencies } = useCurrency();
     const [loggingOut, setLoggingOut] = useState(false);
+    const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
 
     const handleLogout = () => {
         Alert.alert(
@@ -60,6 +63,26 @@ export default function SettingsScreen({ navigation }) {
         </TouchableOpacity>
     );
 
+    const renderCurrencyItem = ({ item }) => (
+        <TouchableOpacity
+            style={[
+                styles.currencyItem,
+                { borderBottomColor: theme.colors.border },
+                currency === item.code && { backgroundColor: theme.colors.chipBg }
+            ]}
+            onPress={() => {
+                setCurrency(item.code);
+                setCurrencyModalVisible(false);
+            }}
+        >
+            <AppText variant="body" style={styles.currencyCode}>{item.code}</AppText>
+            <AppText variant="body" muted style={{ flex: 1, marginLeft: 12 }}>{item.name}</AppText>
+            {currency === item.code && (
+                <Ionicons name="checkmark" size={20} color={theme.colors.success} />
+            )}
+        </TouchableOpacity>
+    );
+
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.bg }]}>
             <View style={styles.header}>
@@ -83,7 +106,12 @@ export default function SettingsScreen({ navigation }) {
 
                 <AppCard>
                     <AppText variant="caption" muted style={styles.sectionLabel}>PREFERENCES</AppText>
-                    <SettingRow icon="cash-outline" title="Currency" value="USD ($)" onPress={() => { }} />
+                    <SettingRow
+                        icon="cash-outline"
+                        title="Currency"
+                        value={`${currency}`}
+                        onPress={() => setCurrencyModalVisible(true)}
+                    />
                     <SettingRow icon="moon-outline" title="Dark Mode" isSwitch switchValue={isDark} onPress={toggleTheme} />
                     <SettingRow icon="notifications-outline" title="Notifications" onPress={() => { }} />
                 </AppCard>
@@ -112,6 +140,27 @@ export default function SettingsScreen({ navigation }) {
                     BudgetBuddy v1.0.0
                 </AppText>
             </ScrollView>
+
+            <Modal
+                visible={currencyModalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+            >
+                <View style={[styles.modalContainer, { backgroundColor: theme.colors.bg }]}>
+                    <View style={styles.modalHeader}>
+                        <AppText variant="h2">Select Currency</AppText>
+                        <TouchableOpacity onPress={() => setCurrencyModalVisible(false)}>
+                            <Ionicons name="close" size={24} color={theme.colors.text} />
+                        </TouchableOpacity>
+                    </View>
+                    <FlatList
+                        data={supportedCurrencies}
+                        renderItem={renderCurrencyItem}
+                        keyExtractor={item => item.code}
+                        contentContainerStyle={{ padding: 16 }}
+                    />
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -129,4 +178,8 @@ const styles = StyleSheet.create({
     settingTitle: { flex: 1 },
     logoutRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
     version: { textAlign: 'center', marginVertical: 24 },
+    modalContainer: { flex: 1 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+    currencyItem: { flexDirection: 'row', paddingVertical: 16, alignItems: 'center', borderBottomWidth: 1 },
+    currencyCode: { fontWeight: '700', width: 50 },
 });
