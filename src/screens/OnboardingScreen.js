@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
     headline: { textAlign: 'center', marginBottom: 16 },
     helperText: { textAlign: 'center', marginBottom: 32, lineHeight: 22 },
     primaryButton: { width: '100%', marginBottom: 12 },
-    secondaryButton: { width: '100%' },
+    secondaryButton: { width: '100%', backgroundColor: '#FFFFFF' },
     footer: { marginTop: 24, textAlign: 'center' },
 });
