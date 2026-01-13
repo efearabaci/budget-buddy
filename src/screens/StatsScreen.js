@@ -8,7 +8,7 @@ import { AppCard, AppText, EmptyState } from '../components';
 import { MonthSelector } from '../components/MonthSelector';
 import { getMonthlyTotals, getMonthlySpentByCategory } from '../services/analytics';
 import { getMonthKey, getPreviousMonth, getNextMonth } from '../utils/month';
-import { formatCurrency } from '../utils/format';
+import { useCurrency } from '../hooks/useCurrency';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -18,6 +18,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 export default function StatsScreen({ navigation }) {
     const { theme } = useTheme();
     const { user } = useAuth();
+    const { formatPrice } = useCurrency();
 
     const [monthKey, setMonthKey] = useState(getMonthKey());
     const [totals, setTotals] = useState({ income: 0, expense: 0, net: 0 });
@@ -99,13 +100,13 @@ export default function StatsScreen({ navigation }) {
                                 <View style={styles.summaryCol}>
                                     <AppText variant="caption" muted>Income</AppText>
                                     <AppText variant="h2" color={theme.colors.success}>
-                                        {formatCurrency(totals.income)}
+                                        {formatPrice(totals.income)}
                                     </AppText>
                                 </View>
                                 <View style={[styles.summaryCol, styles.rightAlign]}>
                                     <AppText variant="caption" muted>Expense</AppText>
                                     <AppText variant="h2" color={theme.colors.danger}>
-                                        {formatCurrency(totals.expense)}
+                                        {formatPrice(totals.expense)}
                                     </AppText>
                                 </View>
                             </View>
