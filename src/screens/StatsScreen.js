@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, StyleSheet, ScrollView, Dimensions, ActivityIndicator, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { PieChart } from 'react-native-chart-kit';
+import { PieChart, BarChart } from 'react-native-chart-kit';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
@@ -19,7 +19,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 export default function StatsScreen({ navigation }) {
     const { theme } = useTheme();
     const { user } = useAuth();
-    const { formatPrice } = useCurrency();
+    const { formatPrice, getSymbol, convertPrice } = useCurrency();
 
     const [monthKey, setMonthKey] = useState(getMonthKey());
     const [totals, setTotals] = useState({ income: 0, expense: 0, net: 0 });
@@ -68,14 +68,38 @@ export default function StatsScreen({ navigation }) {
         }, [loadData])
     );
 
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (!loading) {
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [loading]);
+
     const chartConfig = {
-        backgroundGradientFrom: theme.colors.bg,
-        backgroundGradientFromOpacity: 0,
-        backgroundGradientTo: theme.colors.bg,
-        backgroundGradientToOpacity: 0,
+        backgroundGradientFrom: theme.colors.card,
+        backgroundGradientTo: theme.colors.card,
         color: (opacity = 1) => theme.colors.primary,
         strokeWidth: 2,
+        barPercentage: 0.7,
+        useShadowColorFromDataset: false,
+        decimalPlaces: 0,
+        labelColor: (opacity = 1) => theme.colors.text,
+        style: {
+            borderRadius: 16
+        },
+        propsForBackgroundLines: {
+            strokeDasharray: "", // solid lines
+            stroke: theme.colors.border,
+            strokeOpacity: 0.2
+        }
     };
+
+    const toCurrency = (amount) => Number(convertPrice(amount).toFixed(2));
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.bg }]}>
@@ -98,60 +122,89 @@ export default function StatsScreen({ navigation }) {
                     <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
                 ) : (
                     <>
-                        <AppCard style={styles.summaryCard}>
-                            <View style={styles.summaryRow}>
-                                <View style={styles.summaryCol}>
-                                    <AppText variant="caption" muted>Income</AppText>
-                                    <AppText variant="h2" color={theme.colors.success}>
-                                        {formatPrice(totals.income)}
-                                    </AppText>
-                                </View>
-                                <View style={[styles.summaryCol, styles.rightAlign]}>
-                                    <AppText variant="caption" muted>Expense</AppText>
-                                    <AppText variant="h2" color={theme.colors.danger}>
-                                        {formatPrice(totals.expense)}
-                                    </AppText>
-                                </View>
-                            </View>
-                        </AppCard>
-
-                        {totals.expense > 0 ? (
-                            <AppCard style={{ paddingHorizontal: 0 }}>
-                                <AppText variant="h2" style={styles.sectionTitle}>Spending by Category</AppText>
-                                <PieChart
-                                    data={categoryData}
-                                    width={SCREEN_WIDTH - 64}
-                                    height={220}
-                                    chartConfig={chartConfig}
-                                    accessor={'population'}
-                                    backgroundColor={"transparent"}
-                                    paddingLeft={"15"}
-                                    center={[0, 0]}
-                                    absolute={false}
-                                />
-                                <View style={styles.legendContainer}>
-                                    {categoryData.map((item, index) => (
-                                        <View key={index} style={styles.legendRow}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                                <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-                                                <AppText variant="body" numberOfLines={1} style={{ marginLeft: 8 }}>
-                                                    {item.name}
-                                                </AppText>
-                                            </View>
-                                            <AppText variant="body" style={{ fontWeight: '600' }}>
-                                                {item.percentage.toFixed(1)}%
-                                            </AppText>
-                                        </View>
-                                    ))}
+                        <Animated.View style={{ opacity: fadeAnim }}>
+                            <AppCard style={styles.summaryCard}>
+                                <View style={styles.summaryRow}>
+                                    <View style={styles.summaryCol}>
+                                        <AppText variant="caption" muted>Income</AppText>
+                                        <AppText variant="h2" color={theme.colors.success}>
+                                            {formatPrice(totals.income)}
+                                        </AppText>
+                                    </View>
+                                    <View style={[styles.summaryCol, styles.rightAlign]}>
+                                        <AppText variant="caption" muted>Expense</AppText>
+                                        <AppText variant="h2" color={theme.colors.danger}>
+                                            {formatPrice(totals.expense)}
+                                        </AppText>
+                                    </View>
                                 </View>
                             </AppCard>
-                        ) : (
-                            <EmptyState
-                                icon="pie-chart-outline"
-                                title="No expenses yet"
-                                subtitle="Add expenses to see analytics"
-                            />
-                        )}
+
+                            {(totals.expense > 0 || totals.income > 0) ? (
+                                <>
+                                    <AppCard style={styles.chartCard}>
+                                        <AppText variant="h3" style={styles.sectionTitle}>Income vs Expense</AppText>
+                                        <BarChart
+                                            data={{
+                                                labels: ["Income", "Expense"],
+                                                datasets: [
+                                                    {
+                                                        data: [toCurrency(totals.income), toCurrency(totals.expense)]
+                                                    }
+                                                ]
+                                            }}
+                                            width={SCREEN_WIDTH - 64}
+                                            height={220}
+                                            yAxisLabel={getSymbol()}
+                                            yAxisSuffix=""
+                                            chartConfig={chartConfig}
+                                            style={styles.chart}
+                                            fromZero
+                                            showValuesOnTopOfBars
+                                            withInnerLines={true}
+                                        />
+                                    </AppCard>
+
+                                    {totals.expense > 0 && (
+                                        <AppCard style={{ paddingHorizontal: 0 }}>
+                                            <AppText variant="h2" style={styles.sectionTitle}>Spending by Category</AppText>
+                                            <PieChart
+                                                data={categoryData.map(c => ({ ...c, population: toCurrency(c.population) }))}
+                                                width={SCREEN_WIDTH - 64}
+                                                height={220}
+                                                chartConfig={chartConfig}
+                                                accessor={'population'}
+                                                backgroundColor={"transparent"}
+                                                paddingLeft={"15"}
+                                                center={[0, 0]}
+                                                absolute={false}
+                                            />
+                                            <View style={styles.legendContainer}>
+                                                {categoryData.map((item, index) => (
+                                                    <View key={index} style={styles.legendRow}>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                                            <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                                                            <AppText variant="body" numberOfLines={1} style={{ marginLeft: 8 }}>
+                                                                {item.name}
+                                                            </AppText>
+                                                        </View>
+                                                        <AppText variant="body" style={{ fontWeight: '600' }}>
+                                                            {item.percentage.toFixed(1)}%
+                                                        </AppText>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        </AppCard>
+                                    )}
+                                </>
+                            ) : (
+                                <EmptyState
+                                    icon="pie-chart-outline"
+                                    title="No data yet"
+                                    subtitle="Add transactions to see analytics"
+                                />
+                            )}
+                        </Animated.View>
                     </>
                 )}
             </ScrollView>
@@ -172,4 +225,6 @@ const styles = StyleSheet.create({
     legendContainer: { paddingHorizontal: 16, marginTop: 8 },
     legendRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
     colorDot: { width: 12, height: 12, borderRadius: 6 },
+    chartCard: { marginBottom: 16, alignItems: 'center', paddingBottom: 16 },
+    chart: { marginVertical: 8, borderRadius: 16 },
 });

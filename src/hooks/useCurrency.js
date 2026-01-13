@@ -105,6 +105,7 @@ export const CurrencyProvider = ({ children }) => {
             rates,
             getSymbol,
             formatPrice,
+            convertPrice,
             supportedCurrencies: SUPPORTED_CURRENCIES,
             loading
         }}>

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { AppCard, AppText, TransactionRow, EmptyState } from '../components';
-import { TypeFilterChips } from '../components/FilterChips';
+import { TypeFilterChips, PaymentFilterChips, FilterChips } from '../components/FilterChips';
 import { listenTransactionsByMonth, deleteTransaction } from '../services/transactions';
 import { getCategories } from '../services/firestore';
 import { getMonthKey, formatMonthDisplay, getPreviousMonth, getNextMonth } from '../utils/month';
@@ -20,6 +20,8 @@ export default function TransactionsScreen({ navigation }) {
 
     const [monthKey, setMonthKey] = useState(getMonthKey());
     const [transactions, setTransactions] = useState([]);
+    const [categoryId, setCategoryId] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('all');
     const [categories, setCategories] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState('all');
@@ -56,8 +58,10 @@ export default function TransactionsScreen({ navigation }) {
         return applyFilters(transactions, {
             type: typeFilter,
             search: searchQuery,
+            categoryId,
+            paymentMethod,
         });
-    }, [transactions, typeFilter, searchQuery]);
+    }, [transactions, typeFilter, searchQuery, categoryId, paymentMethod]);
 
     const sections = useMemo(() => {
         return groupTransactionsByDay(filteredTransactions);
@@ -126,7 +130,29 @@ export default function TransactionsScreen({ navigation }) {
             </View>
 
             {/* Type Filter */}
-            <TypeFilterChips selected={typeFilter} onSelect={setTypeFilter} />
+            <View>
+                <TypeFilterChips selected={typeFilter} onSelect={setTypeFilter} />
+
+                <View style={{ marginTop: 8 }}>
+                    <PaymentFilterChips selected={paymentMethod} onSelect={setPaymentMethod} />
+                </View>
+
+                {categories.length > 0 && (
+                    <FilterChips
+                        filters={[
+                            { key: 'all', label: 'All Categories', value: null, filterKey: 'categoryId' },
+                            ...categories.map(c => ({
+                                key: c.id,
+                                label: c.name,
+                                value: c.id,
+                                filterKey: 'categoryId'
+                            }))
+                        ]}
+                        activeFilters={{ categoryId }}
+                        onFilterChange={(_, value) => setCategoryId(value)}
+                    />
+                )}
+            </View>
 
             {/* Transactions List */}
             {sections.length > 0 ? (
