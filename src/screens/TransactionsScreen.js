@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { AppCard, AppText, TransactionRow, EmptyState } from '../components';
-import { TypeFilterChips, PaymentFilterChips, FilterChips } from '../components/FilterChips';
+import { UnifiedFilterList } from '../components/FilterChips';
 import { listenTransactionsByMonth, deleteTransaction } from '../services/transactions';
 import { getCategories } from '../services/firestore';
 import { getMonthKey, formatMonthDisplay, getPreviousMonth, getNextMonth } from '../utils/month';
@@ -129,29 +129,17 @@ export default function TransactionsScreen({ navigation }) {
                 ) : null}
             </View>
 
-            {/* Type Filter */}
+            {/* Unified Filter List */}
             <View>
-                <TypeFilterChips selected={typeFilter} onSelect={setTypeFilter} />
-
-                <View style={{ marginTop: 8 }}>
-                    <PaymentFilterChips selected={paymentMethod} onSelect={setPaymentMethod} />
-                </View>
-
-                {categories.length > 0 && (
-                    <FilterChips
-                        filters={[
-                            { key: 'all', label: 'All Categories', value: null, filterKey: 'categoryId' },
-                            ...categories.map(c => ({
-                                key: c.id,
-                                label: c.name,
-                                value: c.id,
-                                filterKey: 'categoryId'
-                            }))
-                        ]}
-                        activeFilters={{ categoryId }}
-                        onFilterChange={(_, value) => setCategoryId(value)}
-                    />
-                )}
+                <UnifiedFilterList
+                    typeFilter={typeFilter}
+                    setTypeFilter={setTypeFilter}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    categoryId={categoryId}
+                    setCategoryId={setCategoryId}
+                    categories={categories}
+                />
             </View>
 
             {/* Transactions List */}
