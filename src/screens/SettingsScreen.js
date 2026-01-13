@@ -118,7 +118,7 @@ export default function SettingsScreen({ navigation }) {
 
                 <AppCard>
                     <AppText variant="caption" muted style={styles.sectionLabel}>DATA</AppText>
-                    <SettingRow icon="folder-outline" title="Categories" onPress={() => { }} />
+                    <SettingRow icon="folder-outline" title="Categories" onPress={() => navigation.navigate('Categories')} />
                     <SettingRow icon="download-outline" title="Export Data" onPress={() => { }} />
                 </AppCard>
 

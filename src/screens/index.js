@@ -14,3 +14,4 @@ export { default as AddEditBillScreen } from './AddEditBillScreen';
 export { default as BudgetsScreen } from './BudgetsScreen';
 export { default as StatsScreen } from './StatsScreen';
 export { default as SettingsScreen } from './SettingsScreen';
+export { default as CategoriesScreen } from './CategoriesScreen';
